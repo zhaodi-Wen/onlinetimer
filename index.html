@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas Clock & Countdown</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;700&display=swap" rel="stylesheet">
+
+    <!-- Flatpickr Library (CSS for styling the picker) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+
+    <style>
+        /* CSS Styles */
+        :root {
+            --bg-color: #1a1a1a;
+            --card-bg-color: #242424;
+            --text-color: #e0e2e8;
+            --primary-color: #3498db;
+            --accent-color: #2ecc71;
+            --stop-color: #e74c3c;
+            /* NEW: Red color for the stop button */
+            --digit-color: #ffffff;
+            --label-color: #8c97a5;
+            --border-color: #333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            height: 100%;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #app-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #canvas-container {
+            flex-grow: 1;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            max-width: 1200px;
+            height: 100%;
+            max-height: 400px;
+        }
+
+        /* --- Setup Section --- */
+        #setup-section {
+            width: 100%;
+            max-width: 1200px;
+            padding: 2rem;
+            flex-grow: 1;
+        }
+
+        #setup-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            align-items: flex-start;
+        }
+
+        #form-container h2,
+        #holidays-section h3 {
+            font-weight: 300;
+            margin-bottom: 1.5rem;
+            text-align: left;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--label-color);
+        }
+
+        input[type="text"],
+        input#datetime-picker {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-color);
+            border-radius: 8px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.2rem;
+            color: var(--text-color);
+        }
+
+        input#datetime-picker {
+            cursor: pointer;
+        }
+
+        #preset-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .chip {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--label-color);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .chip:hover {
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        #start-button {
+            width: 100%;
+            padding: 1rem;
+            border: none;
+            border-radius: 8px;
+            background-color: var(--primary-color);
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        #holidays-section {
+            padding: 1.5rem;
+            background-color: var(--card-bg-color);
+            border-radius: 12px;
+        }
+
+        #holidays-list {
+            list-style: none;
+        }
+
+        #holidays-list li {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 1rem;
+            padding: 0.7rem 0.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        #holidays-list li:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        #holidays-list .holiday-name {
+            text-align: left;
+        }
+
+        #holidays-list .holiday-date {
+            color: var(--label-color);
+        }
+
+        /* --- Footer Controls --- */
+        footer {
+            padding: 2rem;
+            height: auto;
+            text-align: center;
+        }
+
+        .control-button {
+            background: none;
+            border: 1px solid var(--label-color);
+            color: var(--label-color);
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 0 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .control-button:hover {
+            background-color: var(--label-color);
+            color: var(--bg-color);
+        }
+
+        #countdown-controls {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        /* UPDATED: Specific styles for Stop and Share buttons */
+        #stop-btn {
+            background-color: var(--stop-color);
+            border-color: var(--stop-color);
+            color: white;
+        }
+
+        #stop-btn:hover {
+            background-color: var(--stop-color);
+            opacity: 0.8;
+        }
+
+        #share-btn {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+            color: white;
+        }
+
+        #share-btn:hover {
+            background-color: var(--accent-color);
+            opacity: 0.8;
+        }
+
+        /* --- Share Modal Styles --- */
+        #share-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        #share-modal.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #share-modal-content {
+            padding: 1rem;
+            background-color: var(--card-bg-color);
+            border-radius: 12px;
+            max-width: 90%;
+            max-height: 90%;
+            position: relative;
+        }
+
+        #share-modal-content img {
+            display: block;
+            max-width: 100%;
+            max-height: 80vh;
+            border-radius: 8px;
+        }
+
+        #close-modal-btn {
+            position: absolute;
+            top: -15px;
+            right: -15px;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 900px) {
+            #setup-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="app-container">
+        <div id="canvas-container">
+            <canvas id="main-canvas"></canvas>
+        </div>
+
+        <div id="setup-section" class="hidden">
+            <!-- Setup form content -->
+            <div id="setup-grid">
+                <div id="form-container">
+                    <h2>Create a countdown timer</h2>
+                    <form id="countdown-form">
+                        <div class="form-group">
+                            <input type="text" id="datetime-picker" placeholder="Select Date and Time" required>
+                        </div>
+                        <div id="preset-chips">
+                            <button type="button" class="chip" data-preset="midnight">Midnight</button>
+                            <button type="button" class="chip" data-preset="christmas">Christmas</button>
+                            <button type="button" class="chip" data-preset="newyear">New Year</button>
+                        </div>
+                        <div class="form-group">
+                            <label for="event-name">Countdown name</label>
+                            <input type="text" id="event-name" required>
+                        </div>
+                        <button type="submit" id="start-button">Start</button>
+                    </form>
+                </div>
+                <div id="holidays-section">
+                    <h3>Famous International Holidays</h3>
+                    <ul id="holidays-list"></ul>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <button id="set-countdown-btn" class="control-button">Set a Countdown</button>
+            <div id="countdown-controls" class="hidden">
+                <button id="stop-btn" class="control-button">Stop</button>
+                <button id="share-btn" class="control-button">Share Image</button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Share Modal HTML -->
+    <div id="share-modal">
+        <div id="share-modal-content">
+            <button id="close-modal-btn">&times;</button>
+            <img id="shared-image" src="" alt="Countdown Image">
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script>
+        // =================================================================
+        // VARIABLE DECLARATIONS
+        // =================================================================
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+
+        let animationFrameId;
+        let currentView = 'clock';
+        let countdownData = { event: '', target: null };
+
+        // DOM Elements
+        const setupSection = document.getElementById('setup-section');
+        const canvasContainer = document.getElementById('canvas-container');
+        const setCountdownBtn = document.getElementById('set-countdown-btn');
+        const countdownControls = document.getElementById('countdown-controls');
+        const stopBtn = document.getElementById('stop-btn');
+        const shareBtn = document.getElementById('share-btn');
+        const countdownForm = document.getElementById('countdown-form');
+        const eventNameInput = document.getElementById('event-name');
+        const dateTimePickerInput = document.getElementById('datetime-picker');
+        const holidaysList = document.getElementById('holidays-list');
+
+        // Modal Elements
+        const shareModal = document.getElementById('share-modal');
+        const sharedImage = document.getElementById('shared-image');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+
+        // Date & Time Constants
+        const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+        const famousHolidays = [
+            { name: "Halloween", date: "2025-10-31" },
+            { name: "Thanksgiving (US)", date: "2025-11-27" },
+            { name: "Christmas Day", date: "2025-12-25" },
+            { name: "New Year's Day", date: "2026-01-01" },
+            { name: "Valentine's Day", date: "2026-02-14" },
+            { name: "St. Patrick's Day", date: "2026-03-17" },
+        ];
+
+        const fp = flatpickr(dateTimePickerInput, {
+            enableTime: true,
+            dateFormat: "Y-m-d H:i:S",
+            time_24hr: true,
+            minDate: "today",
+        });
+
+        // --- All other functions are the same ---
+        function switchView(view) { currentView = view; const isCountdown = view === 'countdown'; const isClock = view === 'clock'; const isSetup = view === 'setup'; setupSection.classList.toggle('hidden', !isSetup); canvasContainer.classList.toggle('hidden', isSetup); document.querySelector('footer').classList.toggle('hidden', isSetup); setCountdownBtn.classList.toggle('hidden', !isClock); countdownControls.classList.toggle('hidden', !isCountdown); if (isCountdown) { countdownData.event = localStorage.getItem('countdownEvent'); countdownData.target = localStorage.getItem('countdownTarget'); } }
+        function resizeCanvas() { const rect = canvas.getBoundingClientRect(); canvas.width = rect.width * dpr; canvas.height = rect.height * dpr; ctx.scale(dpr, dpr); }
+        function drawText(text, x, y, size, color, align = 'center', weight = '300') { ctx.font = `${weight} ${size}px Poppins`; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'middle'; ctx.fillText(text, x, y); }
+        function drawClock(now) { const h = canvas.offsetHeight, w = canvas.offsetWidth, titleSize = w * 0.03, digitSize = w * 0.13, labelSize = w * 0.018, titleY = h * 0.25, digitY = h * 0.55, labelY = h * 0.8; const dateStr = `${dayNames[now.getDay()]}, ${monthNames[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`; drawText(dateStr, w / 2, titleY, titleSize, '#8c97a5'); const time = [{ val: String(now.getHours()).padStart(2, '0'), label: 'Hours' }, { val: String(now.getMinutes()).padStart(2, '0'), label: 'Minutes' }, { val: String(now.getSeconds()).padStart(2, '0'), label: 'Seconds' }]; const itemWidth = w / time.length; time.forEach((t, i) => { const x = itemWidth * i + itemWidth / 2; drawText(t.val, x, digitY, digitSize, '#fff', 'center', '700'); drawText(t.label, x, labelY, labelSize, '#8c97a5'); }); }
+        function drawCountdown() { const h = canvas.offsetHeight, w = canvas.offsetWidth, targetTime = new Date(countdownData.target).getTime(), now = new Date().getTime(), diff = targetTime - now; const titleSize = w * 0.04, digitSize = w * 0.1, labelSize = w * 0.018, titleY = h * 0.25, digitY = h * 0.55, labelY = h * 0.8; drawText(countdownData.event, w / 2, titleY, titleSize, '#fff', 'center', '700'); if (diff <= 0) { drawText('has arrived!', w / 2, digitY, titleSize * 0.8, '#8c97a5'); return; } const time = [{ val: Math.floor(diff / (1000 * 60 * 60 * 24)), label: 'Days' }, { val: String(Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))).padStart(2, '0'), label: 'Hours' }, { val: String(Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0'), label: 'Minutes' }, { val: String(Math.floor((diff % (1000 * 60)) / 1000)).padStart(2, '0'), label: 'Seconds' }]; const itemWidth = w / time.length; time.forEach((t, i) => { const x = itemWidth * i + itemWidth / 2; drawText(t.val, x, digitY, digitSize, '#fff', 'center', '700'); drawText(t.label, x, labelY, labelSize, '#8c97a5'); }); }
+        function animate() { ctx.clearRect(0, 0, canvas.width, canvas.height); if (currentView === 'clock') drawClock(new Date()); else if (currentView === 'countdown') drawCountdown(); animationFrameId = requestAnimationFrame(animate); }
+        function renderHolidays() {
+            holidaysList.innerHTML = '';
+            famousHolidays.forEach(holiday => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <span class="holiday-name">${holiday.name}</span>
+                    <span class="holiday-date">${new Date(holiday.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}</span>
+                `;
+                li.addEventListener('click', () => {
+                    eventNameInput.value = holiday.name;
+                    fp.setDate(holiday.date + " 00:00:00", true);
+                });
+                holidaysList.appendChild(li);
+            });
+        }
+
+        setCountdownBtn.addEventListener('click', () => switchView('setup'));
+
+        stopBtn.addEventListener('click', () => {
+            localStorage.removeItem('countdownEvent');
+            localStorage.removeItem('countdownTarget');
+            switchView('clock');
+        });
+
+        shareBtn.addEventListener('click', () => {
+            cancelAnimationFrame(animationFrameId);
+            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--bg-color');
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            drawCountdown();
+            const imageDataUrl = canvas.toDataURL('image/png');
+            sharedImage.src = imageDataUrl;
+            shareModal.classList.add('visible');
+            setTimeout(() => { animate(); }, 100);
+        });
+
+        closeModalBtn.addEventListener('click', () => shareModal.classList.remove('visible'));
+        shareModal.addEventListener('click', (e) => {
+            if (e.target === shareModal) {
+                shareModal.classList.remove('visible');
+            }
+        });
+
+        document.querySelectorAll('.chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                const preset = chip.dataset.preset;
+                let targetDate = new Date();
+                let eventName = '';
+                let year = targetDate.getFullYear();
+                switch (preset) {
+                    case 'midnight':
+                        eventName = 'Midnight';
+                        targetDate.setDate(targetDate.getDate() + 1);
+                        targetDate.setHours(0, 0, 0, 0);
+                        break;
+                    case 'christmas':
+                        eventName = 'Christmas Day';
+                        let christmas = new Date(year, 11, 25);
+                        if (targetDate > christmas) christmas.setFullYear(year + 1);
+                        targetDate = christmas;
+                        break;
+                    case 'newyear':
+                        eventName = "New Year's Day";
+                        targetDate = new Date(year + 1, 0, 1);
+                        break;
+                }
+                eventNameInput.value = eventName;
+                fp.setDate(targetDate, true);
+            });
+        });
+
+        countdownForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const targetFullDate = dateTimePickerInput.value;
+            localStorage.setItem('countdownEvent', eventNameInput.value);
+            localStorage.setItem('countdownTarget', targetFullDate);
+            switchView('countdown');
+        });
+
+        window.addEventListener('resize', resizeCanvas);
+
+        function initialize() {
+            resizeCanvas();
+            renderHolidays();
+            const savedTarget = localStorage.getItem('countdownTarget');
+            if (savedTarget) {
+                switchView('countdown');
+            } else {
+                switchView('clock');
+            }
+            cancelAnimationFrame(animationFrameId);
+            animate();
+        }
+
+        initialize();
+    </script>
+</body>
+
+</html>
